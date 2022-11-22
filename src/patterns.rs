@@ -1,22 +1,44 @@
-use rand::Rng;
+use rand::{Rng, distributions::uniform::SampleRange};
 
 #[derive(Clone, Copy)]
 pub enum PatternItem {
-    Consonant(i64),
-    Vowel(i64),
-    Digit(i64)
+    Consonant(i64, i64),
+    Vowel(i64, i64),
+    Digit(i64, i64)
 }
 
 pub struct Pattern {
     items: Vec<PatternItem>
 }
 
-fn gen_many(max: i64, rand: &mut impl rand::RngCore, charset: Vec<char>) -> String {
-    let mut ret = String::new();
-    for _ in 0..max {
-        ret.push(charset[rand.gen_range(0..charset.len())]);
+impl PatternItem {
+    pub fn charset(&self) -> &'static [char] {
+        match self {
+            PatternItem::Consonant(_, _) =>
+                &['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'r', 's', 't', 'v', 'w', 'y', 'z'],
+            PatternItem::Vowel(_, _) =>
+                &['a', 'e', 'i', 'o', 'u'],
+            PatternItem::Digit(_, _) =>
+                &['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+        }
     }
-    return ret
+
+    pub fn range(&self) -> impl SampleRange<i64> {
+        match *self {
+            PatternItem::Consonant(min, max) => min..=max,
+            PatternItem::Vowel(min, max) => min..=max,
+            PatternItem::Digit(min, max) => min..=max,
+        }
+    }
+
+    pub fn gen(&self, rand: &mut impl rand::RngCore) -> String {
+        let mut ret = String::new();
+        let charset = self.charset();
+        for _ in 0..rand.gen_range(self.range()) {
+            ret.push(charset[rand.gen_range(0..charset.len())]);
+        }
+        return ret
+    }   
 }
 
 impl Pattern {
@@ -25,14 +47,7 @@ impl Pattern {
     }
 
     pub fn gen_one(&self, rand: &mut impl rand::RngCore) -> String {
-        self.items.iter().map(|p| match p {
-            PatternItem::Consonant(n) =>
-                gen_many(*n, rand, vec!['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'r', 's', 't', 'v', 'w', 'y', 'z']),
-            PatternItem::Vowel(n) =>
-                gen_many(*n, rand, vec!['a', 'e', 'i', 'o', 'u']),
-            PatternItem::Digit(n) =>
-                gen_many(*n, rand, ('0'..='9').collect()),
-        }).reduce(|a,b| format!("{}{}", a, b)).unwrap()
+        self.items.iter().map(|p| p.gen(rand)).reduce(|a,b| format!("{}{}", a, b)).unwrap()
     }
 }
 
