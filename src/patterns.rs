@@ -7,15 +7,11 @@ pub enum PatternItem {
     Digit(i64, i64)
 }
 
-pub struct Pattern {
-    items: Vec<PatternItem>
-}
-
 impl PatternItem {
     pub fn charset(&self) -> &'static [char] {
         match self {
             PatternItem::Consonant(_, _) =>
-                &['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'r', 's', 't', 'v', 'w', 'y', 'z'],
+                &['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'r', 's', 't', 'p', 'q', 'v', 'w', 'x', 'y', 'z'],
             PatternItem::Vowel(_, _) =>
                 &['a', 'e', 'i', 'o', 'u'],
             PatternItem::Digit(_, _) =>
@@ -41,9 +37,13 @@ impl PatternItem {
     }   
 }
 
+pub struct Pattern {
+    items: Vec<PatternItem>
+}
+
 impl Pattern {
-    pub fn new(items: &Vec<PatternItem>) -> Self {
-        Pattern { items: items.clone() }
+    pub fn new(items: Vec<PatternItem>) -> Self {
+        Pattern { items: items }
     }
 
     pub fn gen_one(&self, rand: &mut impl rand::RngCore) -> String {
@@ -55,6 +55,25 @@ impl TryFrom<&String> for Pattern {
     type Error = &'static str;
 
     fn try_from(value: &String) -> Result<Self, Self::Error> {
-        todo!()
+        let mut items = Vec::new();
+        for p in value.split('-') {
+            let chars: Vec<&str> = p.split(':').collect();
+            let args: (&str, Option<i64>, Option<i64>) = match chars.len() {
+                1 => (chars[0], Some(1), Some(1)),
+                2 => (chars[0], chars[1].parse().ok(), chars[1].parse().ok()),
+                3 => (chars[0], chars[1].parse().ok(), chars[2].parse().ok()),
+                _ => return Err("Group format: key-min-max or key-min or key")
+            };
+            if args.1 == None || args.2 == None {
+                return Err("Invalid number in group range")
+            }
+            items.push(match args.0 {
+                "c" => PatternItem::Consonant(args.1.unwrap(), args.2.unwrap()),
+                "v" => PatternItem::Vowel(args.1.unwrap(), args.2.unwrap()),
+                "d" => PatternItem::Digit(args.1.unwrap(), args.2.unwrap()),
+                _ => return Err("Unknown group item")
+            });
+        }
+        Ok(Pattern::new(items))
     }
 }
