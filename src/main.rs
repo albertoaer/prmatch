@@ -1,8 +1,15 @@
-use std::{env, time::{SystemTime}};
+use std::{env, time::SystemTime};
 use rand::{rngs::StdRng, SeedableRng};
 
 mod patterns;
-use patterns::{Pattern};
+use patterns::Pattern;
+
+fn get_seed_by_string(source: impl Into<String>) -> u64 {
+    let src: String = source.into();
+    src.bytes().enumerate()
+    .map(|(i, v)| (i as u64).pow(2) * (v as u64))
+    .reduce(|a,b| a + b).unwrap()
+}
 
 fn get_seed_by_time() -> u64 {
     let elapsed = SystemTime::now()
@@ -17,8 +24,7 @@ fn main() {
     } else {
         let pattern = &args[1];
         let seed = match args.get(2) {
-            Some(n) =>
-                n.bytes().map(Into::<u64>::into).reduce(|a,b| a + b).unwrap(),
+            Some(n) => get_seed_by_string(n),
             None => get_seed_by_time()
         };
         println!("- Seed: {}", seed);
