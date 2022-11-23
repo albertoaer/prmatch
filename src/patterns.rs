@@ -2,14 +2,14 @@ use std::rc::Rc;
 
 use rand::{Rng, RngCore};
 
-pub trait PatternComponent {
+pub trait Pattern {
     fn gen(&self, rand: &mut dyn RngCore) -> String;
 }
 
 #[derive(Clone)]
-pub struct PatternItem(Rc<dyn PatternComponent>, u8, u8);
+pub struct PatternItem(pub Rc<dyn Pattern>, pub u8, pub u8);
 
-impl PatternComponent for PatternItem {
+impl Pattern for PatternItem {
     fn gen(&self, rand: &mut dyn RngCore) -> String {
         let mut ret = String::new();
         for _ in 0..rand.gen_range(self.1..=self.2) {
@@ -21,13 +21,13 @@ impl PatternComponent for PatternItem {
 
 
 #[derive(Clone, Copy)]
-pub enum BasicPatternComponent {
+pub enum CharsetPattern {
     Consonant,
     Vowel,
     Digit
 }
 
-impl BasicPatternComponent {
+impl CharsetPattern {
     pub fn charset(&self) -> &'static [char] {
         match self {
             Self::Consonant =>
@@ -40,50 +40,34 @@ impl BasicPatternComponent {
     }
 }
 
-impl PatternComponent for BasicPatternComponent {
+impl Pattern for CharsetPattern {
     fn gen(&self, rand: &mut dyn RngCore) -> String {
         let charset = self.charset();
         charset[rand.gen_range(0..charset.len())].to_string()
     }
 }
 
-pub struct Pattern {
-    items: Vec<PatternItem>
-}
+#[derive(Clone)]
+pub struct OptionPattern(Rc<dyn Pattern>, Rc<dyn Pattern>);
 
-impl Pattern {
-    pub fn new(items: Vec<PatternItem>) -> Self {
-        Pattern { items: items }
-    }
-
-    pub fn gen_one(&self, rand: &mut impl RngCore) -> String {
-        self.items.iter().map(|p| p.gen(rand)).reduce(|a,b| format!("{}{}", a, b)).unwrap()
-    }
-}
-
-impl TryFrom<&String> for Pattern {
-    type Error = &'static str;
-
-    fn try_from(value: &String) -> Result<Self, Self::Error> {
-        let mut items: Vec<PatternItem> = Vec::new();
-        for p in value.split('-') {
-            let chars: Vec<&str> = p.split(':').collect();
-            let args: (&str, Option<u8>, Option<u8>) = match chars.len() {
-                1 => (chars[0], Some(1), Some(1)),
-                2 => (chars[0], chars[1].parse().ok(), chars[1].parse().ok()),
-                3 => (chars[0], chars[1].parse().ok(), chars[2].parse().ok()),
-                _ => return Err("Group format: key-min-max or key-min or key")
-            };
-            if args.1 == None || args.2 == None {
-                return Err("Invalid number in group range")
-            }
-            items.push(PatternItem(Rc::new(match args.0 {
-                "c" => BasicPatternComponent::Consonant,
-                "v" => BasicPatternComponent::Vowel,
-                "d" => BasicPatternComponent::Digit,
-                _ => return Err("Unknown group item")
-            }), args.1.unwrap(), args.2.unwrap()));
+impl Pattern for OptionPattern {
+    fn gen(&self, rand: &mut dyn RngCore) -> String {
+        if rand.gen() {
+            return self.0.gen(rand)
         }
-        Ok(Pattern::new(items))
+        self.1.gen(rand)
+    }
+}
+
+impl Pattern for String {
+    fn gen(&self, _: &mut dyn RngCore) -> String {
+        self.clone()
+    }
+}
+
+impl Pattern for Vec<PatternItem> {
+    fn gen(&self, rand: &mut dyn RngCore) -> String {
+        self.iter().map(|p| p.gen(rand))
+            .reduce(|a,b| format!("{}{}", a, b)).unwrap()
     }
 }

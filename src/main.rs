@@ -1,8 +1,11 @@
 use std::{env, time::SystemTime};
 use rand::{rngs::StdRng, SeedableRng};
 
+mod lexer;
+use lexer::parse_pattern;
+
 mod patterns;
-use patterns::Pattern;
+use crate::patterns::Pattern;
 
 fn get_seed_by_string(source: impl Into<String>) -> u64 {
     let src: String = source.into();
@@ -29,9 +32,9 @@ fn main() {
         };
         println!("- Seed: {}", seed);
         let mut rand = StdRng::seed_from_u64(seed);
-        match Pattern::try_from(pattern) {
+        match parse_pattern(pattern) {
             Ok(p) => {
-                let g = p.gen_one(&mut rand);
+                let g = p.gen(&mut rand);
                 println!("- Output: {}", g);
             },
             Err(err) => println!("! Error: {}", err),
