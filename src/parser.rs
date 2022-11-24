@@ -5,9 +5,10 @@ use crate::patterns::*;
 #[derive(Clone)]
 enum ParserStep {
     Empty,
-    BeginRange(Rc<dyn Pattern>),
+    BasicWrap(Rc<dyn Pattern>),
     Range(Rc<dyn Pattern>, Vec<char>),
-    RangeClose(Rc<dyn Pattern>, Vec<char>, Vec<char>)
+    RangeClose(Rc<dyn Pattern>, Vec<char>, Vec<char>),
+    Raw(String)
 }
 
 fn vec_char_to_number(n: &Vec<char>) -> Option<u32> {
@@ -20,7 +21,7 @@ impl ParserStep {
     fn get_pattern_item(&self) -> Result<Rc<dyn Pattern>, String> {
         match self {
             Self::Empty => Err("There is no group".to_string()),
-            Self::BeginRange(target) => Ok(Rc::new(PatternItem(target.clone(), 1, 1))),
+            Self::BasicWrap(target) => Ok(Rc::new(PatternItem(target.clone(), 1, 1))),
             Self::Range(target, max) =>
                 if let Some(bound) = vec_char_to_number(max) {
                     Ok(Rc::new(PatternItem(target.clone(), bound, bound)))
@@ -32,6 +33,12 @@ impl ParserStep {
                     Ok(Rc::new(PatternItem(target.clone(), min, max)))
                 } else {
                     Err("Empty range value".to_string())
+                }
+            Self::Raw(s) =>
+                if s.len() == 0 {
+                    Err("Empty sequence".to_string())
+                } else {
+                    Ok(Rc::new(s.clone()))
                 }
         }
     }
@@ -57,7 +64,7 @@ impl Parser {
     fn close_group(&mut self) -> Result<(), String> {
         match self.stack.pop() {
             Some(v) => {
-                self.step = ParserStep::BeginRange(Rc::new(self.items.clone()));
+                self.step = ParserStep::BasicWrap(Rc::new(self.items.clone()));
                 self.items = v;
             },
             None => return Err("Unexpected group close with no openned group".to_string()),
@@ -79,25 +86,33 @@ impl Parser {
                 self.close_group()?;
             },
             '-' => self.must_push_item()?,
+            '#' => self.step = ParserStep::BasicWrap(Rc::new(SubsetPattern(self.step.get_pattern_item()?))),
+            '%' if matches!(self.step, ParserStep::Empty) =>
+                self.step = ParserStep::Raw(String::new()),
             'c' if matches!(self.step, ParserStep::Empty) =>
-                self.step = ParserStep::BeginRange(Rc::new(CharsetPattern::Consonant)),
+                self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Consonant)),
             'v' if matches!(self.step, ParserStep::Empty) =>
-                self.step = ParserStep::BeginRange(Rc::new(CharsetPattern::Vowel)),
+                self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Vowel)),
             'd' if matches!(self.step, ParserStep::Empty) =>
-                self.step = ParserStep::BeginRange(Rc::new(CharsetPattern::Digit)),
-            ':' => match &self.step {
-                ParserStep::BeginRange(i) =>
+                self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Digit)),
+            ':' => match &mut self.step {
+                ParserStep::BasicWrap(i) =>
                     self.step = ParserStep::Range(i.clone(), Vec::new()),
                 ParserStep::Range(i, r1) =>
                     self.step = ParserStep::RangeClose(i.clone(), r1.clone(), Vec::new()),
+                ParserStep::Raw(r) => r.push(c),
                 _ => return Err(format!("Unexpected token: {}", c))
             }
             '0'..='9' => match &mut self.step {
                 ParserStep::Range(_, r1) => r1.push(c),
                 ParserStep::RangeClose(_, _, r2) => r2.push(c),
+                ParserStep::Raw(r) => r.push(c),
                 _ => return Err(format!("Unexpected token: {}", c))
             }
-            _ => return Err(format!("Unexpected token: {}", c))
+            _ => match &mut self.step {
+                ParserStep::Raw(r) => r.push(c),
+                _ => return Err(format!("Unexpected token: {}", c))
+            }
             
         }
         Ok(())
