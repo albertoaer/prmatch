@@ -30,6 +30,9 @@ impl ParserStep {
                 }
             Self::RangeClose(target, min, max) =>
                 if let (Some(min), Some(max)) = (vec_char_to_number(min), vec_char_to_number(max)) {
+                    if min > max {
+                        return Err("Invalid range".to_string())
+                    }
                     Ok(Rc::new(PatternItem(target.clone(), min, max)))
                 } else {
                     Err("Empty range value".to_string())
@@ -95,6 +98,8 @@ impl Parser {
                 self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Vowel)),
             'd' if matches!(self.step, ParserStep::Empty) =>
                 self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Digit)),
+            's' if matches!(self.step, ParserStep::Empty) =>
+                self.step = ParserStep::BasicWrap(Rc::new(String::from(" "))),
             ':' => match &mut self.step {
                 ParserStep::BasicWrap(i) =>
                     self.step = ParserStep::Range(i.clone(), Vec::new()),
@@ -113,7 +118,6 @@ impl Parser {
                 ParserStep::Raw(r) => r.push(c),
                 _ => return Err(format!("Unexpected token: {}", c))
             }
-            
         }
         Ok(())
     }
