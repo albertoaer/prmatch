@@ -7,7 +7,7 @@ pub trait Pattern {
 }
 
 #[derive(Clone)]
-pub struct PatternItem(pub Rc<dyn Pattern>, pub u8, pub u8);
+pub struct PatternItem(pub Rc<dyn Pattern>, pub u32, pub u32);
 
 impl Pattern for PatternItem {
     fn gen(&self, rand: &mut dyn RngCore) -> String {

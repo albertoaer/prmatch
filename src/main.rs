@@ -2,7 +2,7 @@ use std::{env, time::SystemTime};
 use rand::{rngs::StdRng, SeedableRng};
 
 mod lexer;
-use lexer::parse_pattern;
+use lexer::Parser;
 
 mod patterns;
 use crate::patterns::Pattern;
@@ -31,9 +31,11 @@ fn main() {
             None => get_seed_by_time()
         };
         println!("- Seed: {}", seed);
-        let mut rand = StdRng::seed_from_u64(seed);
-        match parse_pattern(pattern) {
+        let mut chars = pattern.chars();
+        let mut parser = Parser::new();
+        match parser.parse_pattern(&mut chars) {
             Ok(p) => {
+                let mut rand = StdRng::seed_from_u64(seed);
                 let g = p.gen(&mut rand);
                 println!("- Output: {}", g);
             },
