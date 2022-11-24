@@ -1,8 +1,8 @@
 use std::{env, time::SystemTime};
 use rand::{rngs::StdRng, SeedableRng};
 
-mod lexer;
-use lexer::Parser;
+mod parser;
+use parser::Parser;
 
 mod patterns;
 use crate::patterns::Pattern;
