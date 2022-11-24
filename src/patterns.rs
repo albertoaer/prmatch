@@ -59,6 +59,16 @@ impl Pattern for OptionPattern {
     }
 }
 
+#[derive(Clone)]
+pub struct SubsetPattern(pub Rc<dyn Pattern>);
+
+impl Pattern for SubsetPattern {
+    fn gen(&self, rand: &mut dyn RngCore) -> String {
+        let generated = self.0.gen(rand);
+        generated.chars().nth(rand.gen_range(0..generated.len())).unwrap().into()
+    }
+}
+
 impl Pattern for String {
     fn gen(&self, _: &mut dyn RngCore) -> String {
         self.clone()
