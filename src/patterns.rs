@@ -48,14 +48,11 @@ impl Pattern for CharsetPattern {
 }
 
 #[derive(Clone)]
-pub struct OptionPattern(pub Rc<dyn Pattern>, pub Rc<dyn Pattern>);
+pub struct OptionPattern(pub Vec<Rc<dyn Pattern>>);
 
 impl Pattern for OptionPattern {
     fn gen(&self, rand: &mut dyn RngCore) -> String {
-        if rand.gen() {
-            return self.0.gen(rand)
-        }
-        self.1.gen(rand)
+        self.0[rand.gen_range(0..self.0.len())].gen(rand)
     }
 }
 
