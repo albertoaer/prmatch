@@ -5,7 +5,6 @@ mod parser;
 use parser::Parser;
 
 mod patterns;
-use crate::patterns::Pattern;
 
 fn get_seed_by_string(source: impl Into<String>) -> u64 {
     let src: String = source.into();
