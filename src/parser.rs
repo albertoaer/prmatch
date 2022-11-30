@@ -122,14 +122,14 @@ impl Parser {
     fn parse_char(&mut self, c: char) -> Result<(), String> {
         match (c, &self.step) {
             (
-                '(' | '{' | '%' | 'c' | 'v' | 'd' | 's',
+                '[' | '{' | '%' | 'c' | 'v' | 'd' | 's',
                 BasicWrap(_) | Range(_, _) | RangeClose(_, _, _)
             ) => self.must_push_item()?,
             _ => ()
         }
         match (c, &mut self.step) {
-            ('(', Empty) => self.open_group(ParserGroupMode::Concat),
-            (')', _) => {
+            ('[', Empty) => self.open_group(ParserGroupMode::Concat),
+            (']', _) => {
                 self.must_push_item()?;
                 self.close_group(ParserGroupMode::Concat)?;
             },
