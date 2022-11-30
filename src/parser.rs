@@ -117,47 +117,30 @@ impl Parser {
     }
 
     fn parse_char(&mut self, c: char) -> Result<(), String> {
-        match c {
-            '(' if matches!(self.step, ParserStep::Empty) => self.open_group(ParserGroupMode::Concat),
-            ')' => {
+        match (c, &mut self.step) {
+            ('(', ParserStep::Empty) => self.open_group(ParserGroupMode::Concat),
+            (')', _) => {
                 self.must_push_item()?;
                 self.close_group(ParserGroupMode::Concat)?;
             },
-            '{' if matches!(self.step, ParserStep::Empty) => self.open_group(ParserGroupMode::Option),
-            '}' => {
+            ('{', ParserStep::Empty) => self.open_group(ParserGroupMode::Option),
+            ('}', _) => {
                 self.must_push_item()?;
                 self.close_group(ParserGroupMode::Option)?;
             },
-            '-' => self.must_push_item()?,
-            '#' => self.step = ParserStep::BasicWrap(Rc::new(SubsetPattern(self.step.get_pattern_item()?))),
-            '%' if matches!(self.step, ParserStep::Empty) =>
-                self.step = ParserStep::Raw(String::new()),
-            'c' if matches!(self.step, ParserStep::Empty) =>
-                self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Consonant)),
-            'v' if matches!(self.step, ParserStep::Empty) =>
-                self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Vowel)),
-            'd' if matches!(self.step, ParserStep::Empty) =>
-                self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Digit)),
-            's' if matches!(self.step, ParserStep::Empty) =>
-                self.step = ParserStep::BasicWrap(Rc::new(String::from(" "))),
-            ':' => match &mut self.step {
-                ParserStep::BasicWrap(i) =>
-                    self.step = ParserStep::Range(i.clone(), Vec::new()),
-                ParserStep::Range(i, r1) =>
-                    self.step = ParserStep::RangeClose(i.clone(), r1.clone(), Vec::new()),
-                ParserStep::Raw(r) => r.push(c),
-                _ => return Err(format!("Unexpected token: {}", c))
-            }
-            '0'..='9' => match &mut self.step {
-                ParserStep::Range(_, r1) => r1.push(c),
-                ParserStep::RangeClose(_, _, r2) => r2.push(c),
-                ParserStep::Raw(r) => r.push(c),
-                _ => return Err(format!("Unexpected token: {}", c))
-            }
-            _ => match &mut self.step {
-                ParserStep::Raw(r) => r.push(c),
-                _ => return Err(format!("Unexpected token: {}", c))
-            }
+            ('-', _) => self.must_push_item()?,
+            ('#', _) => self.step = ParserStep::BasicWrap(Rc::new(SubsetPattern(self.step.get_pattern_item()?))),
+            ('%', ParserStep::Empty) => self.step = ParserStep::Raw(String::new()),
+            ('c', ParserStep::Empty) => self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Consonant)),
+            ('v', ParserStep::Empty) => self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Vowel)),
+            ('d', ParserStep::Empty) => self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Digit)),
+            ('s', ParserStep::Empty) => self.step = ParserStep::BasicWrap(Rc::new(String::from(" "))),
+            (':', ParserStep::BasicWrap(i)) => self.step = ParserStep::Range(i.clone(), Vec::new()),
+            (':', ParserStep::Range(i, r1)) => self.step = ParserStep::RangeClose(i.clone(), r1.clone(), Vec::new()),
+            ('0'..='9', ParserStep::Range(_, r1)) => r1.push(c),
+            ('0'..='9', ParserStep::RangeClose(_, _, r2)) => r2.push(c),
+            (_, ParserStep::Raw(r)) => r.push(c),
+            (_, _) => return Err(format!("Unexpected token: {}", c))
         }
         Ok(())
     }
