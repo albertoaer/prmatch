@@ -16,7 +16,7 @@ $ prmatch pattern <seed>
 Basic example
 
 ```
-$ prmatch c-v-c sample-seed
+$ prmatch cvc sample-seed
 - Seed: 37694
 - Output: qeq
 ```
@@ -24,7 +24,7 @@ $ prmatch c-v-c sample-seed
 More advanced example, pick a word
 
 ```
-$ prmatch.exe  "{(%hello)-(%world)}"
+$ prmatch.exe "{(%hello)(%world)}"
 - Seed: 1669390355085
 - Output: hello
 ```
@@ -32,7 +32,7 @@ $ prmatch.exe  "{(%hello)-(%world)}"
 Generate a word using only the letters a, b, c
 
 ```
-$ prmatch.exe  "(%abc)#:2:5"
+$ prmatch.exe "(%abc)#:2:5"
 - Seed: 1669390468358
 - Output: aacba
 ```
@@ -40,7 +40,7 @@ $ prmatch.exe  "(%abc)#:2:5"
 Useful example, create an user name
 
 ```
-$ prmatch.exe  "(%myname_)-d-d-d"
+$ prmatch.exe "(%myname_)ddd"
 - Seed: 1669391244818
 - Output: myname_973
 ```
