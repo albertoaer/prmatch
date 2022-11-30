@@ -1,10 +1,12 @@
-use std::{env, time::SystemTime};
+use std::time::SystemTime;
 use rand::{rngs::StdRng, SeedableRng};
 
 mod parser;
 use parser::Parser;
 
 mod patterns;
+
+mod cli;
 
 fn get_seed_by_string(source: impl Into<String>) -> u64 {
     let src: String = source.into();
@@ -20,25 +22,24 @@ fn get_seed_by_time() -> u64 {
 }
 
 fn main() {
-    let args: Vec<_> = env::args().collect();
-    if args.len() < 2 || args.len() > 3 {
-        println!("! Usage:\n\t{0} <pattern> <seed>\n\t{0} <pattern>", args[0]);
-    } else {
-        let pattern = &args[1];
-        let seed = match args.get(2) {
-            Some(n) => get_seed_by_string(n),
-            None => get_seed_by_time()
-        };
+    let args = cli::get_args();
+    let seed = match (args.seed, args.calc_seed) {
+        (_, Some(n)) => n,
+        (Some(s), _) => get_seed_by_string(s),
+        (None, None) => get_seed_by_time()
+    };
+    if !args.not_pretty {
         println!("- Seed: {}", seed);
-        let mut chars = pattern.chars();
-        let mut parser = Parser::new();
-        match parser.parse_pattern(&mut chars) {
-            Ok(p) => {
-                let mut rand = StdRng::seed_from_u64(seed);
-                let g = p.gen(&mut rand);
-                println!("- Output: {}", g);
-            },
-            Err(err) => println!("! Error: {}", err),
-        }
+    }
+    let mut chars = args.pattern.chars();
+    let mut rand = StdRng::seed_from_u64(seed);
+    match Parser::new().parse_pattern(&mut chars) {
+        Ok(pattern) => for _ in 0..args.n {
+            if !args.not_pretty {
+                print!("- Output: ")
+            }
+            println!("{}", pattern.gen(&mut rand));
+        },
+        Err(err) => println!("! Error: {}", err),
     }
 }
