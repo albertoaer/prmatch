@@ -47,6 +47,8 @@ impl ParserStep {
     }
 }
 
+use ParserStep::*;
+
 #[derive(Clone, Copy, PartialEq)]
 enum ParserGroupMode {
     Concat,
@@ -86,14 +88,15 @@ pub struct Parser {
 }
 
 impl Parser {
+
     pub fn new() -> Self {
-        Parser { stack: Vec::new(), items: ParserGroup::new(ParserGroupMode::Concat), step: ParserStep::Empty }
+        Parser { stack: Vec::new(), items: ParserGroup::new(ParserGroupMode::Concat), step: Empty }
     }
 
     fn open_group(&mut self, mode: ParserGroupMode) {
         self.stack.push(self.items.clone());
         self.items = ParserGroup::new(mode);
-        self.step = ParserStep::Empty;
+        self.step = Empty;
     }
 
     fn close_group(&mut self, mode: ParserGroupMode) -> Result<(), String> {
@@ -102,7 +105,7 @@ impl Parser {
                 if self.items.mode != mode {
                     return Err("Closing wrong group".to_string())
                 }
-                self.step = ParserStep::BasicWrap(self.items.get_pattern_item()?);
+                self.step = BasicWrap(self.items.get_pattern_item()?);
                 self.items = v;
             },
             None => return Err("Unexpected group close with no openned group".to_string()),
@@ -112,34 +115,40 @@ impl Parser {
 
     fn must_push_item(&mut self) -> Result<(), String> {
         self.items.push(self.step.get_pattern_item()?);
-        self.step = ParserStep::Empty;
+        self.step = Empty;
         Ok(())
     }
 
     fn parse_char(&mut self, c: char) -> Result<(), String> {
+        match (c, &self.step) {
+            (
+                '(' | '{' | '%' | 'c' | 'v' | 'd' | 's',
+                BasicWrap(_) | Range(_, _) | RangeClose(_, _, _)
+            ) => self.must_push_item()?,
+            _ => ()
+        }
         match (c, &mut self.step) {
-            ('(', ParserStep::Empty) => self.open_group(ParserGroupMode::Concat),
+            ('(', Empty) => self.open_group(ParserGroupMode::Concat),
             (')', _) => {
                 self.must_push_item()?;
                 self.close_group(ParserGroupMode::Concat)?;
             },
-            ('{', ParserStep::Empty) => self.open_group(ParserGroupMode::Option),
+            ('{', Empty) => self.open_group(ParserGroupMode::Option),
             ('}', _) => {
                 self.must_push_item()?;
                 self.close_group(ParserGroupMode::Option)?;
             },
-            ('-', _) => self.must_push_item()?,
             ('#', _) => self.step = ParserStep::BasicWrap(Rc::new(SubsetPattern(self.step.get_pattern_item()?))),
-            ('%', ParserStep::Empty) => self.step = ParserStep::Raw(String::new()),
-            ('c', ParserStep::Empty) => self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Consonant)),
-            ('v', ParserStep::Empty) => self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Vowel)),
-            ('d', ParserStep::Empty) => self.step = ParserStep::BasicWrap(Rc::new(CharsetPattern::Digit)),
-            ('s', ParserStep::Empty) => self.step = ParserStep::BasicWrap(Rc::new(String::from(" "))),
-            (':', ParserStep::BasicWrap(i)) => self.step = ParserStep::Range(i.clone(), Vec::new()),
-            (':', ParserStep::Range(i, r1)) => self.step = ParserStep::RangeClose(i.clone(), r1.clone(), Vec::new()),
-            ('0'..='9', ParserStep::Range(_, r1)) => r1.push(c),
-            ('0'..='9', ParserStep::RangeClose(_, _, r2)) => r2.push(c),
-            (_, ParserStep::Raw(r)) => r.push(c),
+            ('%', Empty) => self.step = Raw(String::new()),
+            ('c', Empty) => self.step = BasicWrap(Rc::new(CharsetPattern::Consonant)),
+            ('v', Empty) => self.step = BasicWrap(Rc::new(CharsetPattern::Vowel)),
+            ('d', Empty) => self.step = BasicWrap(Rc::new(CharsetPattern::Digit)),
+            ('s', Empty) => self.step = BasicWrap(Rc::new(String::from(" "))),
+            (':', BasicWrap(i)) => self.step = Range(i.clone(), Vec::new()),
+            (':', Range(i, r1)) => self.step = RangeClose(i.clone(), r1.clone(), Vec::new()),
+            ('0'..='9', Range(_, r1)) => r1.push(c),
+            ('0'..='9', RangeClose(_, _, r2)) => r2.push(c),
+            (_, Raw(r)) => r.push(c),
             (_, _) => return Err(format!("Unexpected token: {}", c))
         }
         Ok(())
