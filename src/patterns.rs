@@ -62,6 +62,9 @@ pub struct SubsetPattern(pub Rc<dyn Pattern>);
 impl Pattern for SubsetPattern {
     fn gen(&self, rand: &mut dyn RngCore) -> String {
         let generated = self.0.gen(rand);
+        if generated.is_empty() {
+            return generated
+        }
         generated.chars().nth(rand.gen_range(0..generated.len())).unwrap().into()
     }
 }
