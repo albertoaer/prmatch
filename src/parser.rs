@@ -132,7 +132,7 @@ impl Parser {
     fn parse_char(&mut self, c: char) -> Result<(), String> {
         match (c, &self.step) {
             (
-                '[' | '{' | '%' | 'c' | 'v' | 'd' | 's',
+                '[' | '{' | '%' | 'c' | 'v' | 'd' | 's' | 'n',
                 BasicWrap(_) | Range(_, _) | RangeClose(_, _, _) | Probability(_, _)
             ) => self.must_push_item()?,
             _ => ()
@@ -153,7 +153,8 @@ impl Parser {
             ('c', Empty) => self.step = BasicWrap(Rc::new(CharsetPattern::Consonant)),
             ('v', Empty) => self.step = BasicWrap(Rc::new(CharsetPattern::Vowel)),
             ('d', Empty) => self.step = BasicWrap(Rc::new(CharsetPattern::Digit)),
-            ('s', Empty) => self.step = BasicWrap(Rc::new(String::from(" "))),
+            ('s', Empty) => self.step = BasicWrap(Rc::new(String::from(' '))),
+            ('n', Empty) => self.step = BasicWrap(Rc::new(String::from('\n'))),
             ('/', BasicWrap(i)) => self.step = Probability(i.clone(), Vec::new()),
             ('/', Range(_, _) | RangeClose(_, _, _)) => self.step = Probability(self.step.get_pattern_item()?, Vec::new()),
             (':', Probability(_, _)) => self.step = Range(self.step.get_pattern_item()?, Vec::new()),
