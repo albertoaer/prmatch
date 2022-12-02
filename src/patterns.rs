@@ -69,6 +69,18 @@ impl Pattern for SubsetPattern {
     }
 }
 
+#[derive(Clone)]
+pub struct ProbabilityPattern(pub Rc<dyn Pattern>, pub u32);
+
+impl Pattern for ProbabilityPattern {
+    fn gen(&self, rand: &mut dyn RngCore) -> String {
+        if rand.gen_ratio(self.1, 100) {
+            return self.0.gen(rand);
+        }
+        String::new()
+    }
+}
+
 impl Pattern for String {
     fn gen(&self, _: &mut dyn RngCore) -> String {
         self.clone()

@@ -8,7 +8,8 @@ enum ParserStep {
     BasicWrap(Rc<dyn Pattern>),
     Range(Rc<dyn Pattern>, Vec<char>),
     RangeClose(Rc<dyn Pattern>, Vec<char>, Vec<char>),
-    Raw(String)
+    Raw(String),
+    Probability(Rc<dyn Pattern>, Vec<char>)
 }
 
 fn vec_char_to_number(n: &Vec<char>) -> Option<u32> {
@@ -42,6 +43,15 @@ impl ParserStep {
                     Err("Empty sequence".to_string())
                 } else {
                     Ok(Rc::new(s.clone()))
+                }
+            Self::Probability(target, prob) =>
+                if let Some(prob) = vec_char_to_number(prob) {
+                    if prob > 100 {
+                        return Err("Probability must be between 0 and 100".to_string())
+                    }
+                    Ok(Rc::new(ProbabilityPattern(target.clone(), prob)))
+                } else {
+                    Err("Empty probability value".to_string())
                 }
         }
     }
@@ -123,7 +133,7 @@ impl Parser {
         match (c, &self.step) {
             (
                 '[' | '{' | '%' | 'c' | 'v' | 'd' | 's',
-                BasicWrap(_) | Range(_, _) | RangeClose(_, _, _)
+                BasicWrap(_) | Range(_, _) | RangeClose(_, _, _) | Probability(_, _)
             ) => self.must_push_item()?,
             _ => ()
         }
@@ -144,10 +154,14 @@ impl Parser {
             ('v', Empty) => self.step = BasicWrap(Rc::new(CharsetPattern::Vowel)),
             ('d', Empty) => self.step = BasicWrap(Rc::new(CharsetPattern::Digit)),
             ('s', Empty) => self.step = BasicWrap(Rc::new(String::from(" "))),
+            ('/', BasicWrap(i)) => self.step = Probability(i.clone(), Vec::new()),
+            ('/', Range(_, _) | RangeClose(_, _, _)) => self.step = Probability(self.step.get_pattern_item()?, Vec::new()),
+            (':', Probability(_, _)) => self.step = Range(self.step.get_pattern_item()?, Vec::new()),
             (':', BasicWrap(i)) => self.step = Range(i.clone(), Vec::new()),
             (':', Range(i, r1)) => self.step = RangeClose(i.clone(), r1.clone(), Vec::new()),
             ('0'..='9', Range(_, r1)) => r1.push(c),
             ('0'..='9', RangeClose(_, _, r2)) => r2.push(c),
+            ('0'..='9', Probability(_, r1)) => r1.push(c),
             (_, Raw(r)) => r.push(c),
             (_, _) => return Err(format!("Unexpected token: {}", c))
         }
