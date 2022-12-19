@@ -15,7 +15,7 @@ $ prmatch cvc -s sample-seed
 More advanced example, pick a word
 
 ```
-$ prmatch {[%hello][%world]}
+$ prmatch {*hello**world*}
 - Seed: 1669390355085
 - Output: hello
 ```
@@ -23,7 +23,7 @@ $ prmatch {[%hello][%world]}
 Generate a word using only the letters a, b, c
 
 ```
-$ prmatch [%abc]#:2:5
+$ prmatch *abc*#:2:5
 - Seed: 1669390468358
 - Output: aacba
 ```
@@ -31,7 +31,7 @@ $ prmatch [%abc]#:2:5
 Useful example, create an user name
 
 ```
-$ prmatch [%myname_]ddd
+$ prmatch *myname_*ddd
 - Seed: 1669391244818
 - Output: myname_973
 ```
@@ -39,7 +39,7 @@ $ prmatch [%myname_]ddd
 Repeat a pattern with a known seed
 
 ```
-$ prmatch [%myname_]ddd -c 1669391244818
+$ prmatch *myname_*ddd -c 1669391244818
 - Seed: 1669391244818
 - Output: myname_973
 ```
@@ -47,7 +47,7 @@ $ prmatch [%myname_]ddd -c 1669391244818
 Generate a list of words with a known seed
 
 ```
-$ prmatch [%myname_]ddd -c 1669391244818 -n 5 --not-pretty
+$ prmatch *myname_*ddd -c 1669391244818 -n 5 --not-pretty
 myname_973
 myname_867
 myname_363

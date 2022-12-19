@@ -132,7 +132,7 @@ impl Parser {
     fn parse_char(&mut self, c: char) -> Result<(), String> {
         match (c, &self.step) {
             (
-                '[' | '{' | '%' | 'c' | 'v' | 'd' | 's' | 'n',
+                '[' | '{' | '*' | 'c' | 'v' | 'd' | 's' | 'n',
                 BasicWrap(_) | Range(_, _) | RangeClose(_, _, _) | Probability(_, _)
             ) => self.must_push_item()?,
             _ => ()
@@ -149,7 +149,8 @@ impl Parser {
                 self.close_group(ParserGroupMode::Option)?;
             },
             ('#', _) => self.step = ParserStep::BasicWrap(Rc::new(SubsetPattern(self.step.get_pattern_item()?))),
-            ('%', Empty) => self.step = Raw(String::new()),
+            ('*', Empty) => self.step = Raw(String::new()),
+            ('*', Raw(s)) => self.step = BasicWrap(Rc::new(s.clone())),
             ('c', Empty) => self.step = BasicWrap(Rc::new(CharsetPattern::Consonant)),
             ('v', Empty) => self.step = BasicWrap(Rc::new(CharsetPattern::Vowel)),
             ('d', Empty) => self.step = BasicWrap(Rc::new(CharsetPattern::Digit)),
@@ -163,7 +164,7 @@ impl Parser {
             ('0'..='9', Range(_, r1)) => r1.push(c),
             ('0'..='9', RangeClose(_, _, r2)) => r2.push(c),
             ('0'..='9', Probability(_, r1)) => r1.push(c),
-            (_, Raw(r)) => r.push(c),
+            (c, Raw(r)) => r.push(c),
             (_, _) => return Err(format!("Unexpected token: {}", c))
         }
         Ok(())
